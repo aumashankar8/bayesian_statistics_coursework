@@ -1,0 +1,101 @@
+###
+###  Mosquitofish Data 
+###
+#
+# Soubeyrand S, Beaudouin R, Desassis N, Monod G. Model-based estimation of the link between the daily survival probability and a time-varying covariate, application to mosquitofish survival data. Math Biosci. 2007 Dec;210(2):508-22.
+#
+# header:  id, identification number; i, mesocosm; N0 and N1, initial and final counts of surviving fish; L0 and L1, initial and final mean lengths of surviving fish; d, duration in days separating the initial and final measurements.
+#
+
+mf.df=read.table("mosquitofish.txt",header=TRUE) # read in mosquitofish data
+head(mf.df)
+
+n=32 # those groups of fish that were only counted twice
+y=mf.df$N1[1:n]
+N=mf.df$N0[1:n]
+
+plot(N,y,asp=TRUE)
+abline(0,1)
+
+###
+###  Metropolis-Hastings 
+###
+
+set.seed(1234)
+
+alpha=2  # beta distn hyper parameters implying E(p)=2/(1+2)
+beta=1
+
+n.mcmc=5000  # note: n.mcmc needs to be much larger in this example
+p.save=rep(0,n.mcmc)
+p.last=.5
+for(k in 1:n.mcmc){
+  p.star=rbeta(1,1,1) # proposal 
+  mh.1=sum(dbinom(y,N,p.star,log=TRUE))+dbeta(p.star,alpha,beta,log=TRUE)+dbeta(p.last,1,1,log=TRUE)
+  mh.2=sum(dbinom(y,N,p.last,log=TRUE))+dbeta(p.last,alpha,beta,log=TRUE)+dbeta(p.star,1,1,log=TRUE)
+  mh=exp(mh.1-mh.2)
+  if(rbinom(1,1,min(mh,1))==1){
+    p.last=p.star
+  }
+  p.save[k]=p.last
+}
+
+n.burn=round(.2*n.mcmc)
+plot(p.save,type="l",ylab="p",xlab="iteration",ylim=c(0,1)) # trace plot
+
+hist(p.save[n.burn:n.mcmc],breaks=30,xlim=c(0,1),prob=TRUE,xlab="p",ylab="density",main="") # posterior histogram
+lines(density(p.save[n.burn:n.mcmc]),lwd=2,col=2) # posterior density estimation plot
+curve(dbeta(x,sum(y)+alpha,sum(N-y)+beta),col=3,add=TRUE,n=1000,lwd=2)
+legend("topleft",lwd=2,col=1:3,legend=c("MCMC post. hist.","MCMC post. dens.","analytical post dens"))
+
+###
+###  Gibbs Sampler  (also an MC sampler in this case b/c only 1 parameter)
+###
+
+n.mcmc=5000
+p.save=rep(0,n.mcmc)
+alpha.post=sum(y)+alpha
+beta.post=sum(N-y)+beta
+for(k in 1:n.mcmc){
+  p.save[k]=rbeta(1,alpha.post,beta.post)
+}
+
+n.burn=round(.2*n.mcmc)
+plot(p.save,type="l",ylab="p",xlab="iteration",ylim=c(0,1)) # trace plot
+
+hist(p.save[n.burn:n.mcmc],breaks=30,xlim=c(0,1),prob=TRUE,xlab="p",ylab="density",main="") 
+lines(density(p.save[n.burn:n.mcmc]),lwd=2,col=2) 
+
+###
+###  Bayesian Inference (posterior summaries) 
+###
+
+mean(p.save) # posterior mean using MC integration
+var(p.save)  # posterior variance using MC integration
+sd(p.save)  # posterior std dev. using MC integration 
+quantile(p.save,c(.025,.975))  # 95% posterior credible interval (equal-tailed)
+
+###
+###  JAGS Example
+###
+
+library(rjags)
+
+m.jags <-"
+  model{
+    for(i in 1:n){
+      y[i] ~ dbin(p,N[i])
+    }
+    p ~ dbeta(alpha,beta)
+}
+"
+
+mod<-textConnection(m.jags) # read model
+m.out<-jags.model(mod,data=list('y'=y,'n'=n,'N'=N,'alpha'=alpha,'beta'=beta),n.chains=1,n.adapt=0) # build model 
+m.samples=jags.samples(m.out,c('p'),n.mcmc) # fit model to data
+
+plot(m.samples$p[1,,1],type="l",lty=1,ylab="p",xlab="iteration",ylim=c(0,1)) # trace plot
+
+hist(m.samples$p[1,n.burn:n.mcmc,1],breaks=30,xlim=c(0,1),prob=TRUE,xlab="p",ylab="density",main="") # posterior histogram 
+lines(density(m.samples$p[1,n.burn:n.mcmc,1]),lwd=2,col=2) 
+

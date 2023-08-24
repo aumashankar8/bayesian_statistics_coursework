@@ -1,0 +1,10 @@
+Station Numbers
+Midland Internation AP - 23023
+Lubbock Intl AP - 23042
+Wichita Falls - Wichita Municipal AP - 13966
+Abilene Regional AP - 13962
+Dallas-Fort Worth - DAL-FTW WSCMO AP - 03927
+Tyler - 419207
+
+Data Title Text:
+Max Temperature, Min Temperature, Average Temperature, Error, Precipitation, Snowfall, Error, Heating Degree Days, Cooling Degree Days, Error Daily Lister (2022-01-01 - 2023-04-01), Stn_ 419207

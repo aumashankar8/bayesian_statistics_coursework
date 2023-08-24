@@ -1,0 +1,7 @@
+Posterior mean for Beta:
+B0:-0.7347155
+B1:0.05798116
+B2:0.1545265
+B3:0.2873034
+
+posterior p-value:0.69036
